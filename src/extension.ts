@@ -100,7 +100,11 @@ export function activate(context: vscode.ExtensionContext) {
         ];
         uris.push(...linuxUris);
       } else if (os === "darwin") {
-        const darwinUris = [vscode.Uri.joinPath(userDir, "Library/Fonts")];
+        const darwinUris = [
+          vscode.Uri.joinPath(userDir, "Library/Fonts"),
+          vscode.Uri.parse("/Library/Fonts/"),
+          vscode.Uri.parse("/System/Library/Fonts/"),
+        ];
         uris.push(...darwinUris);
       }
 
@@ -108,16 +112,24 @@ export function activate(context: vscode.ExtensionContext) {
       const config = vscode.workspace.getConfiguration("editor");
       const oldFont = config.get("fontFamily");
 
-      let timeout: NodeJS.Timeout | undefined;
+      let currentPreviewFont: string | undefined = undefined;
+      let timeout: NodeJS.Timeout | undefined = undefined;
+
+      const previewFont = async () => {
+        await config.update("fontFamily", currentPreviewFont, true);
+      };
 
       const selectedFont = await vscode.window.showQuickPick(fonts, {
         onDidSelectItem(item) {
           if (timeout) {
             clearTimeout(timeout);
           }
-          timeout = setTimeout(async () => {
-            await config.update("fontFamily", item, true);
-          });
+
+          if (typeof item === "string") {
+            currentPreviewFont = item;
+          }
+
+          timeout = setTimeout(previewFont, 100);
         },
         placeHolder: "Select a font",
         title: "Change editor font",
@@ -126,9 +138,9 @@ export function activate(context: vscode.ExtensionContext) {
       clearTimeout(timeout);
 
       if (selectedFont) {
-        config.update("fontFamily", selectedFont, true);
+        await config.update("fontFamily", selectedFont, true);
       } else {
-        config.update("fontFamily", oldFont, true);
+        await config.update("fontFamily", oldFont, true);
       }
     }
   );
