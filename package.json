@@ -5,7 +5,7 @@
   "version": "0.0.2",
   "publisher": "talhabalaj",
   "repository": {
-    "url": "https://github.com/talhabalaj/vscode-font-change"
+    "url": "https://github.com/talhabalaj/vscode-font-changer"
   },
   "engines": {
     "vscode": "^1.60.0"
