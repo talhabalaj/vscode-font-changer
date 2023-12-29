@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import fontkit from "fontkit";
+import { open as openFont } from "fontkit";
 import "@total-typescript/ts-reset";
 
 async function findFonts(paths: vscode.Uri[]) {
@@ -30,7 +30,7 @@ async function findFonts(paths: vscode.Uri[]) {
       } else if (isFileOrLink(fileStat)) {
         if (uri.path.endsWith(".otf") || uri.path.endsWith(".ttf")) {
           try {
-            const font = await fontkit.open(uri.path);
+            const font = await openFont(uri.path);
 
             if (fontSet.has(font.familyName)) {
               return;
