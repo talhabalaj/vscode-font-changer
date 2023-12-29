@@ -1,68 +1,129 @@
 import * as vscode from "vscode";
 import fontkit from "fontkit";
+import "@total-typescript/ts-reset";
 
-async function findFonts(paths: vscode.Uri[]): Promise<string[]> {
-  return (
-    await Promise.all(
-      paths.map(async (path) => {
-        try {
-          const file = await vscode.workspace.fs.stat(path);
+async function findFonts(paths: vscode.Uri[]) {
+  const fontSet = new Set<string>();
 
-          if (file.type === vscode.FileType.Directory) {
-            return findFonts(
-              (await vscode.workspace.fs.readDirectory(path)).map((f) =>
-                vscode.Uri.joinPath(path, f[0])
-              )
-            );
-          } else if (file.type === vscode.FileType.File) {
-            if (path.path.endsWith(".ttf") || path.path.endsWith(".otf")) {
-              const font = await fontkit.open(path.path);
-              return font.familyName || "-";
-              if (
-                font.widthOfGlyph(font.glyphsForString("i")[0].id) ===
-                font.widthOfGlyph(font.glyphsForString("m")[0].id)
-              ) {
-                // check if monospaced
-                return font.familyName;
-              } else {
-                return font.familyName + " (Non-monospaced)";
-              }
-            }
-          }
-        } catch (e) {
-          console.error(e);
-          return;
+  const fontPromises = paths.map(
+    async (uri): Promise<string | string[] | undefined> => {
+      let fileStat: vscode.FileStat | null = null;
+
+      try {
+        fileStat = await vscode.workspace.fs.stat(uri);
+      } catch (e) {
+        if (e instanceof vscode.FileSystemError) {
+          console.error("Did not find font file: " + uri.path);
+        } else {
+          console.error("error: " + uri.path, e);
         }
-      })
-    )
-  )
-    .filter(Boolean)
-    .flat() as string[];
+      }
+
+      if (!fileStat) {
+        return;
+      }
+
+      if (fileStat.type === vscode.FileType.Directory) {
+        const uris = await getFilesOfDir(uri);
+        const fonts = await findFonts(uris);
+        return fonts.flat();
+      } else if (isFileOrLink(fileStat)) {
+        if (uri.path.endsWith(".otf") || uri.path.endsWith(".ttf")) {
+          try {
+            const font = await fontkit.open(uri.path);
+
+            if (fontSet.has(font.familyName)) {
+              return;
+            }
+
+            const iGlyph = font.glyphsForString("i")[0];
+            const mGlyph = font.glyphsForString("m")[0];
+
+            if (
+              iGlyph &&
+              mGlyph &&
+              iGlyph.advanceWidth === mGlyph.advanceWidth &&
+              font.characterSet.includes(65) // 65 is captial A
+            ) {
+              fontSet.add(font.familyName);
+              return font.familyName;
+            }
+          } catch (e) {
+            console.error(`skipping font ${uri.path}, error: `, e);
+          }
+        }
+      }
+    }
+  );
+
+  const fonts = await Promise.allSettled(fontPromises);
+
+  if (fonts) {
+    return fonts
+      .map((f) => f.status === "fulfilled" && f.value)
+      .filter(Boolean)
+      .flat();
+  }
+
+  return [];
+}
+
+async function getFilesOfDir(path: vscode.Uri) {
+  const files = await vscode.workspace.fs.readDirectory(path);
+  return files.map((f) => vscode.Uri.joinPath(path, f[0]));
+}
+
+function isFileOrLink(file: vscode.FileStat) {
+  return file.type === vscode.FileType.File;
 }
 
 export function activate(context: vscode.ExtensionContext) {
   let disposable = vscode.commands.registerCommand(
     "font-changer.selectFont",
     async () => {
-      // vscode.window.showInformationMessage('Hello World from Font Changer!');
-      const user = "talhabalaj";
-      // load font List
-      const uris = [
-        vscode.Uri.parse("/usr/share/fonts/"),
-        vscode.Uri.parse("/usr/local/share/fonts/"),
-        vscode.Uri.parse(`/home/talhabalaj/.fonts`),
-        vscode.Uri.parse(`/home/talhabalaj/.local/share/fonts`),
-      ];
+      const userDir = vscode.Uri.parse(process.env.HOME || "/root");
+      const os = process.platform;
+      const uris: vscode.Uri[] = [];
+
+      if (os === "win32") {
+        const windowsUris = [
+          vscode.Uri.parse("C:\\Windows\\Fonts"),
+          vscode.Uri.joinPath(userDir, `AppData/Local/Microsoft/Windows/Fonts`),
+        ];
+        uris.push(...windowsUris);
+      } else if (os === "linux") {
+        const linuxUris = [
+          vscode.Uri.parse("/usr/share/fonts/"),
+          vscode.Uri.parse("/usr/local/share/fonts/"),
+          vscode.Uri.joinPath(userDir, `.fonts`),
+          vscode.Uri.joinPath(userDir, `.local/share/fonts`),
+        ];
+        uris.push(...linuxUris);
+      } else if (os === "darwin") {
+        const darwinUris = [vscode.Uri.joinPath(userDir, "Library/Fonts")];
+        uris.push(...darwinUris);
+      }
 
       const fonts = await findFonts(uris);
       const config = vscode.workspace.getConfiguration("editor");
-      let oldFont = config.get("fontFamily");
+      const oldFont = config.get("fontFamily");
+
+      let timeout: NodeJS.Timeout | undefined;
 
       const selectedFont = await vscode.window.showQuickPick(fonts, {
         onDidSelectItem(item) {
-          config.update("fontFamily", item, true);
+          if (timeout) {
+            clearTimeout(timeout);
+          }
+          timeout = setTimeout(async () => {
+            await config.update("fontFamily", item, true);
+          }, 100);
         },
+        placeHolder: "Select a font",
+        title: "Change editor font",
       });
+
+      clearTimeout(timeout);
 
       if (selectedFont) {
         config.update("fontFamily", selectedFont, true);
