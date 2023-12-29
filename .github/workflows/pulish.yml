@@ -1,0 +1,24 @@
+name: Publish to VSCode Store
+on: 
+  release:
+    types: 
+      - published
+  workflow_dispatch: 
+jobs:
+  package-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm i -g @vscode/vsce
+      - run: vsce package
+      - uses: actions/upload-artifact@v4.0.0
+        with:
+          path: "*.vsix"
+      - run: vsce publish -p $TOKEN 
+        env: 
+          TOKEN: ${{ secrets.VSCODE_PUBLISH_TOKEN }} 
+          
