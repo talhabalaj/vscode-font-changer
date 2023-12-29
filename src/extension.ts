@@ -117,7 +117,7 @@ export function activate(context: vscode.ExtensionContext) {
           }
           timeout = setTimeout(async () => {
             await config.update("fontFamily", item, true);
-          }, 100);
+          });
         },
         placeHolder: "Select a font",
         title: "Change editor font",

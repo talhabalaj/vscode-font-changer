@@ -4,7 +4,8 @@
 		"target": "ES2022",
 		"outDir": "out",
 		"lib": [
-			"ES2022"
+			"ES2022",
+			"DOM"
 		],
 		"sourceMap": true,
 		"rootDir": "src",
@@ -13,5 +14,5 @@
 		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
 		// "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
 		// "noUnusedParameters": true,  /* Report errors on unused parameters. */
-	}
+	},
 }

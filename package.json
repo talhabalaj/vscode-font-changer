@@ -1,21 +1,25 @@
 {
   "name": "font-changer",
   "displayName": "Font Changer",
-  "description": "Change fonts ",
+  "description": "Quickly changes fonts by selecting from a installed fonts",
   "version": "0.0.1",
+  "repository": {
+    "url": "https://github.com/talhabalaj/vscode-font-change"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
   ],
+  "icon": "./icon.png",
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "font-changer.selectFont",
-        "title": "Font Changer: Select font"
+        "title": "Font Changer: Select Global font"
       }
     ]
   },
