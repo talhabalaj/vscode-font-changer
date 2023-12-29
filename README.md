@@ -2,14 +2,15 @@
 
 The Font Changer Extension for Visual Studio Code is a handy tool that allows you to easily change the fonts used in the code editor to any font installed on your computer. 
 
-
-
 ## Features
 
 - *Font Selection*: Choose from fonts installed on your computer to customize the code editor's fonts.  
   ![Alt text](demo.gif)
 
 ## Release Notes
+
+### 0.0.5
+- Windows fonts support
 
 ### 0.0.4
 - Peformance improvement while previewing fonts
