@@ -28,7 +28,11 @@ async function findFonts(paths: vscode.Uri[]) {
         const fonts = await findFonts(uris);
         return fonts.flat();
       } else if (isFileOrLink(fileStat)) {
-        if (uri.path.endsWith(".otf") || uri.path.endsWith(".ttf")) {
+        if (
+          uri.path.endsWith(".otf") ||
+          uri.path.endsWith(".ttf") ||
+          uri.path.endsWith(".ttc")
+        ) {
           try {
             const font = await openFont(uri.fsPath);
 
@@ -81,14 +85,19 @@ export function activate(context: vscode.ExtensionContext) {
   let disposable = vscode.commands.registerCommand(
     "font-changer.selectFont",
     async () => {
-      const userDir = vscode.Uri.file(process.env.HOME || process.env.USERPROFILE || "/root");
+      const userDir = vscode.Uri.file(
+        process.env.HOME || process.env.USERPROFILE || "/root"
+      );
       const os = process.platform;
       const uris: vscode.Uri[] = [];
 
       if (os === "win32") {
         const windowsUris = [
           vscode.Uri.file("c:\\Windows\\Fonts"),
-          vscode.Uri.joinPath(userDir, `AppData\\Local\\Microsoft\\Windows\\Fonts`),
+          vscode.Uri.joinPath(
+            userDir,
+            `AppData\\Local\\Microsoft\\Windows\\Fonts`
+          ),
         ];
         uris.push(...windowsUris);
       } else if (os === "linux") {

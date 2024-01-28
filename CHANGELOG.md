@@ -1,9 +1,21 @@
 # Change Log
 
-All notable changes to the "font-changer" extension will be documented in this file.
+## 0.0.6
+- `.ttc` font file support 
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## 0.0.5
+- Windows fonts support
 
-## [Unreleased]
+## 0.0.4
+- Peformance improvement while previewing fonts
+- MacOS system and local fonts support
 
-- Initial release
+## 0.0.3
+- Fixed GIF explainer in the README
+
+## 0.0.2 
+- Added support for old versions of VSCode
+
+## 0.0.1
+- Added `Font Changer: Select Global Font` command
+
