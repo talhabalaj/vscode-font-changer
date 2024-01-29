@@ -2,33 +2,47 @@ import * as vscode from "vscode";
 import { Font, open as openFont } from "fontkit";
 import { getFilesOfDir } from "./fs";
 
+type DateString = string;
+export interface CachedFontsMap {
+  [key: `${string}-${DateString}`]: string[];
+}
+
 export async function getFonts(
-  os: (typeof process)["platform"] = process.platform
+  os: (typeof process)["platform"] = process.platform,
+  cachedFonts: CachedFontsMap
 ) {
-  const loadedFonts = new Set<string>();
   const installedFontPaths = getInstalledFontsPaths(os);
-  const detectedFontsFiles = await Promise.all(
-    installedFontPaths.map(findFonts)
-  ).then((f) => f.flat());
-  const fonts = await Promise.all(detectedFontsFiles.map(loadFont)).then((f) =>
+  const detectedFontsFiles = await Promise.all(installedFontPaths.map(findFonts)).then((f) =>
     f.flat()
   );
-  return fonts
-    .filter((font) => isMonoFont(font))
-    .map((f) =>
-      loadedFonts.has(f.familyName)
-        ? undefined
-        : loadedFonts.add(f.familyName) && f.familyName
-    )
-    .filter(Boolean);
+  const monoFontsFamilies = await Promise.all(
+    detectedFontsFiles.map(async (file) => {
+      const cacheKey = `${file.uri.fsPath}-${file.stat.mtime}` as const;
+      if (!(cacheKey in cachedFonts)) {
+        const font = await loadFont(file.uri);
+        cachedFonts[cacheKey] = font.filter(isMonoFont).map((f) => f.familyName);
+      } else {
+        console.log("Cache Hit");
+      }
+
+      return cachedFonts[cacheKey];
+    })
+  ).then((f) => f.flat());
+
+  const loadedFontFamilies = new Set<string>();
+  const uniqueFonts = monoFontsFamilies.filter((name) => {
+    if (!loadedFontFamilies.has(name)) {
+      loadedFontFamilies.add(name);
+      return true;
+    }
+    return false;
+  });
+
+  return uniqueFonts;
 }
 
 function isFontFile(filePath: string) {
-  return (
-    filePath.endsWith(".otf") ||
-    filePath.endsWith(".ttf") ||
-    filePath.endsWith(".ttc")
-  );
+  return filePath.endsWith(".otf") || filePath.endsWith(".ttf") || filePath.endsWith(".ttc");
 }
 
 function isMonoFont(font: Font) {
@@ -36,16 +50,14 @@ function isMonoFont(font: Font) {
     const iGlyph = font.glyphsForString("i")[0];
     const mGlyph = font.glyphsForString("m")[0];
 
-    if (
+    return (
       iGlyph &&
       mGlyph &&
       iGlyph.advanceWidth === mGlyph.advanceWidth &&
       font.characterSet.includes(65) // 65 is captial A
-    ) {
-      return true;
-    }
+    );
   } catch (e) {
-    console.log("Error determining mono font", e, font);
+    console.error("Error determining mono font", e, font);
   }
 
   return false;
@@ -56,86 +68,69 @@ function isMonoFont(font: Font) {
  * @returns Fonts in a font file
  */
 async function loadFont(path: vscode.Uri): Promise<Font[]> {
-  let font: Font | undefined = undefined;
-
   try {
-    font = await openFont(path.fsPath);
+    const font = await openFont(path.fsPath);
+    // @ts-ignore Typing for font kit isn't working correctly
+    if (font.type === "TTC") {
+      // @ts-ignore Typing for font kit isn't working correctly
+      return font.fonts;
+    } else {
+      return [font];
+    }
   } catch (e) {
-    console.error("Error loading font: " + path, e);
-  }
-
-  if (!font) {
+    console.error("Error loading font:", path.fsPath, e);
     return [];
   }
-
-  // @ts-ignore Typing for font kit aren't working correctly
-  if (font.type === "TTC") {
-    // @ts-ignore
-    const fonts = font.fonts;
-    return fonts;
-  }
-
-  return [font];
 }
 
-async function findFonts(rootUri: vscode.Uri): Promise<vscode.Uri[]> {
-  let fileStat: vscode.FileStat | null = null;
-
+async function findFonts(rootUri: vscode.Uri): Promise<
+  {
+    uri: vscode.Uri;
+    stat: vscode.FileStat;
+  }[]
+> {
   try {
-    fileStat = await vscode.workspace.fs.stat(rootUri);
+    const fileStat = await vscode.workspace.fs.stat(rootUri);
+    if (fileStat.type === vscode.FileType.Directory) {
+      const directories = await getFilesOfDir(rootUri);
+      const results = await Promise.all(directories.map(findFonts));
+      return results.flat();
+    } else if (fileStat.type === vscode.FileType.File && isFontFile(rootUri.path)) {
+      return [
+        {
+          uri: rootUri,
+          stat: fileStat,
+        },
+      ];
+    }
   } catch (e) {
-    if (e instanceof vscode.FileSystemError) {
-      console.error("Did not find font file: " + rootUri.path);
-    } else {
-      console.error("error: " + rootUri.path, e);
-    }
+    console.error("Error finding fonts:", rootUri.path, e);
   }
-
-  if (!fileStat) {
-    return [];
-  }
-
-  if (fileStat.type === vscode.FileType.Directory) {
-    const directories = await getFilesOfDir(rootUri);
-    const results = await Promise.all(directories.map(findFonts));
-    return results.flat();
-  } else if (fileStat.type === vscode.FileType.File) {
-    if (isFontFile(rootUri.path)) {
-      return [rootUri];
-    }
-  }
-
   return [];
 }
 
 export function getInstalledFontsPaths(os: (typeof process)["platform"]) {
-  const uris: vscode.Uri[] = [];
-  const userDir = vscode.Uri.file(
-    process.env.HOME || process.env.USERPROFILE || "/root"
-  );
+  const userDir = vscode.Uri.file(process.env.HOME || process.env.USERPROFILE || "/root");
 
   if (os === "win32") {
-    const windowsUris = [
+    return [
       vscode.Uri.file("c:\\Windows\\Fonts"),
       vscode.Uri.joinPath(userDir, `AppData\\Local\\Microsoft\\Windows\\Fonts`),
     ];
-    uris.push(...windowsUris);
   } else if (os === "linux") {
-    const linuxUris = [
+    return [
       vscode.Uri.parse("/usr/share/fonts/"),
       vscode.Uri.parse("/usr/local/share/fonts/"),
       vscode.Uri.joinPath(userDir, `.fonts`),
       vscode.Uri.joinPath(userDir, `.local/share/fonts`),
     ];
-    uris.push(...linuxUris);
   } else if (os === "darwin") {
-    const darwinUris = [
+    return [
       vscode.Uri.joinPath(userDir, "Library/Fonts"),
       vscode.Uri.parse("/Library/Fonts/"),
       vscode.Uri.parse("/System/Library/Fonts/"),
     ];
-    uris.push(...darwinUris);
   }
 
-  return uris;
+  return [];
 }

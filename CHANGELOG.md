@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.0.9
+- Adds Global Font Cache to improve performance
+- Adds `Font Changer: Clear Global Font Cache` command to clear the cache
+
 ## 0.0.8
 - Updated keybinds
 

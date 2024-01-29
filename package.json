@@ -2,7 +2,7 @@
   "name": "actual-font-changer",
   "displayName": "Font Changer",
   "description": "Quickly changes fonts by selecting from a installed fonts",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "publisher": "talhabalaj",
   "repository": {
     "url": "https://github.com/talhabalaj/vscode-font-changer"
@@ -21,6 +21,10 @@
       {
         "command": "font-changer.selectFont",
         "title": "Font Changer: Select Global font"
+      },
+      {
+        "command": "font-changer.clearFontCache",
+        "title": "Font Changer: Clear Font Cache"
       }
     ],
     "keybindings": [
