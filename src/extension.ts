@@ -1,123 +1,12 @@
 import * as vscode from "vscode";
-import { open as openFont } from "fontkit";
 import "@total-typescript/ts-reset";
-
-async function findFonts(paths: vscode.Uri[]) {
-  const fontSet = new Set<string>();
-
-  const fontPromises = paths.map(
-    async (uri): Promise<string | string[] | undefined> => {
-      let fileStat: vscode.FileStat | null = null;
-
-      try {
-        fileStat = await vscode.workspace.fs.stat(uri);
-      } catch (e) {
-        if (e instanceof vscode.FileSystemError) {
-          console.error("Did not find font file: " + uri.path);
-        } else {
-          console.error("error: " + uri.path, e);
-        }
-      }
-
-      if (!fileStat) {
-        return;
-      }
-
-      if (fileStat.type === vscode.FileType.Directory) {
-        const uris = await getFilesOfDir(uri);
-        const fonts = await findFonts(uris);
-        return fonts.flat();
-      } else if (isFileOrLink(fileStat)) {
-        if (
-          uri.path.endsWith(".otf") ||
-          uri.path.endsWith(".ttf") ||
-          uri.path.endsWith(".ttc")
-        ) {
-          try {
-            const font = await openFont(uri.fsPath);
-
-            if (fontSet.has(font.familyName)) {
-              return;
-            }
-
-            const iGlyph = font.glyphsForString("i")[0];
-            const mGlyph = font.glyphsForString("m")[0];
-
-            if (
-              iGlyph &&
-              mGlyph &&
-              iGlyph.advanceWidth === mGlyph.advanceWidth &&
-              font.characterSet.includes(65) // 65 is captial A
-            ) {
-              fontSet.add(font.familyName);
-              return font.familyName;
-            }
-          } catch (e) {
-            console.error(`skipping font ${uri.path}, error: `, e);
-          }
-        }
-      }
-    }
-  );
-
-  const fonts = await Promise.allSettled(fontPromises);
-
-  if (fonts) {
-    return fonts
-      .map((f) => f.status === "fulfilled" && f.value)
-      .filter(Boolean)
-      .flat();
-  }
-
-  return [];
-}
-
-async function getFilesOfDir(path: vscode.Uri) {
-  const files = await vscode.workspace.fs.readDirectory(path);
-  return files.map((f) => vscode.Uri.joinPath(path, f[0]));
-}
-
-function isFileOrLink(file: vscode.FileStat) {
-  return file.type === vscode.FileType.File;
-}
+import { getFonts } from "./utils/fonts";
 
 export function activate(context: vscode.ExtensionContext) {
   let disposable = vscode.commands.registerCommand(
     "font-changer.selectFont",
     async () => {
-      const userDir = vscode.Uri.file(
-        process.env.HOME || process.env.USERPROFILE || "/root"
-      );
-      const os = process.platform;
-      const uris: vscode.Uri[] = [];
-
-      if (os === "win32") {
-        const windowsUris = [
-          vscode.Uri.file("c:\\Windows\\Fonts"),
-          vscode.Uri.joinPath(
-            userDir,
-            `AppData\\Local\\Microsoft\\Windows\\Fonts`
-          ),
-        ];
-        uris.push(...windowsUris);
-      } else if (os === "linux") {
-        const linuxUris = [
-          vscode.Uri.parse("/usr/share/fonts/"),
-          vscode.Uri.parse("/usr/local/share/fonts/"),
-          vscode.Uri.joinPath(userDir, `.fonts`),
-          vscode.Uri.joinPath(userDir, `.local/share/fonts`),
-        ];
-        uris.push(...linuxUris);
-      } else if (os === "darwin") {
-        const darwinUris = [
-          vscode.Uri.joinPath(userDir, "Library/Fonts"),
-          vscode.Uri.parse("/Library/Fonts/"),
-          vscode.Uri.parse("/System/Library/Fonts/"),
-        ];
-        uris.push(...darwinUris);
-      }
-
-      const fonts = await findFonts(uris);
+      const fonts = await getFonts();
       const config = vscode.workspace.getConfiguration("editor");
       const oldFont = config.get("fontFamily");
 

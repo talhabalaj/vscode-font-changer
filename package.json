@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@total-typescript/ts-reset": "^0.5.1",
-    "fontkit": "^2.0.2"
+    "fontkit": "^2.0.2",
+    "iconv-lite": "^0.6.3"
   }
 }
