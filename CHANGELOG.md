@@ -1,5 +1,8 @@
 # Change Log
 
+## 0.0.8
+- Updated keybinds
+
 ## 0.0.7
 - Fixes `.ttc` font file support
 - Adds keybinding to quickly open the font selector

@@ -5,14 +5,17 @@ The Font Changer Extension for Visual Studio Code is a handy tool that allows yo
 ## Features
 
 - _Font Selection_: Choose from fonts installed on your computer to customize the code editor's fonts.  
-  - Open the `Command Palette`, find and select `Font Changer: Select Global Font` or just press `Ctrl + K Ctrl + F` (`Cmd + K Cmd + F` on Mac)
+  - Open the `Command Palette`, find and select `Font Changer: Select Global Font` or just press `Ctrl + K Shift + F` (`Cmd + K Shift + F` on Mac)
   - Select the font to preview
   - Press `Enter` to apply the font or Press `Escape` to cancel  
   ![Alt text](demo.gif)
 
 ## Release Notes
 
-## 0.0.7
+### 0.0.8
+- Updated keybinds
+
+### 0.0.7
 
 - Fixes `.ttc` font file support
 - Adds keybinding to quickly open the font selector

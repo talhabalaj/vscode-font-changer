@@ -4,7 +4,7 @@ import { getFilesOfDir } from "./fs";
 
 export async function getFonts(
   os: (typeof process)["platform"] = process.platform
-  ) {
+) {
   const loadedFonts = new Set<string>();
   const installedFontPaths = getInstalledFontsPaths(os);
   const detectedFontsFiles = await Promise.all(
