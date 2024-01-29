@@ -6,7 +6,23 @@ export function activate(context: vscode.ExtensionContext) {
   let disposable = vscode.commands.registerCommand(
     "font-changer.selectFont",
     async () => {
-      const fonts = await getFonts();
+      const fonts = vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Window,
+          cancellable: false,
+          title: "Loading fonts...",
+        },
+        async (progress) => {
+          progress.report({ increment: 0 });
+
+          const fonts = await getFonts();
+
+          progress.report({ increment: 100 });
+
+          return fonts;
+        }
+      );
+
       const config = vscode.workspace.getConfiguration("editor");
       const oldFont = config.get("fontFamily");
 

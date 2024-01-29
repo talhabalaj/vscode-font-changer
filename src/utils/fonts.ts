@@ -2,11 +2,10 @@ import * as vscode from "vscode";
 import { Font, open as openFont } from "fontkit";
 import { getFilesOfDir } from "./fs";
 
-const loadedFonts = new Set<string>();
-
 export async function getFonts(
   os: (typeof process)["platform"] = process.platform
-) {
+  ) {
+  const loadedFonts = new Set<string>();
   const installedFontPaths = getInstalledFontsPaths(os);
   const detectedFontsFiles = await Promise.all(
     installedFontPaths.map(findFonts)
