@@ -25,6 +25,10 @@
       {
         "command": "font-changer.clearFontCache",
         "title": "Font Changer: Clear Font Cache"
+      },
+      {
+        "command": "font-changer.selectTerminalFont",
+        "title": "Font Changer: Select Terminal Font"
       }
     ],
     "keybindings": [
@@ -32,6 +36,11 @@
         "command": "font-changer.selectFont",
         "key": "ctrl+k alt+f",
         "mac": "cmd+k opt+f"
+      },
+      {
+        "command": "font-changer.selectTerminalFont",
+        "key": "ctrl+k alt+t",
+        "mac": "cmd+k opt+t"
       }
     ]
   },
